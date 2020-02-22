@@ -1,0 +1,61 @@
+sharding:
+  jdbc:
+    datasource:
+      names: ds0,ds1
+      ds0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/order1
+        username: root
+        password: root
+      ds1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/order2
+        username: root
+        password: root
+    config:
+#      masterslave: # 配置读写分离
+#        load-balance-algorithm-type: round_robin # 配置从库选择策略，提供轮询与随机，这里选择用轮询//random 随机 //round_robin 轮询
+#        name: db1s2
+#        master-data-source-name: db-test0
+#        slave-data-source-names: db-test1,db-test2
+#        props:
+#        sql: # 开启SQL显示，默认值: false，注意：仅配置读写分离时不会打印日志！！！
+#        show: true
+      sharding:
+        props:
+          sql.show: true
+        tables:
+          t_user:  #t_user表
+            key-generator-column-name: id  #主键
+            actual-data-nodes: ds${0..1}.t_user${0..1}  #数据节点
+            database-strategy:  #分库策略
+              inline:
+                sharding-column: city_id
+                algorithm-expression: ds${city_id % 2}
+            table-strategy:  #分表策略
+              inline:
+                shardingColumn: sex
+                algorithm-expression: t_user${sex % 2}
+          t_address:
+            key-generator-column-name: id
+            actual-data-nodes: ds${0..1}.t_address
+            database-strategy:
+              inline:
+                shardingColumn: lit
+                algorithm-expression: ds${lit % 2}
+
+
+
+
+                masterslave: # 配置读写分离
+                load-balance-algorithm-type: round_robin # 配置从库选择策略，提供轮询与随机，这里选择用轮询//random 随机 //round_robin 轮询
+                name: db1s2
+                master-data-source-name: db-test0
+                slave-data-source-names: db-test1,db-test2
+                props:
+                sql: # 开启SQL显示，默认值: false，注意：仅配置读写分离时不会打印日志！！！
+                show: true
+
+
