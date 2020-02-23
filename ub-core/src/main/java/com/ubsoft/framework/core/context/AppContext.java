@@ -1,5 +1,6 @@
 package com.ubsoft.framework.core.context;
 
+import com.ubsoft.framework.core.cache.ICache;
 import com.ubsoft.framework.core.conf.AppConfig;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -52,6 +53,9 @@ public class AppContext implements ApplicationContextAware {
 
        public static AppConfig getAppConfig(){
          return getBeanOfType(AppConfig.class);
+       }
+       public  static ICache getCache(){
+            return  getBean("cache",ICache.class);
        }
 
     }

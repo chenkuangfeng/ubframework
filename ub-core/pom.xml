@@ -70,6 +70,12 @@
             <groupId>net.sf.ehcache</groupId>
             <artifactId>ehcache</artifactId>
         </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+
         <!--dependency>
             <groupId>net.sf.json-lib</groupId>
             <artifactId>json-lib</artifactId>
