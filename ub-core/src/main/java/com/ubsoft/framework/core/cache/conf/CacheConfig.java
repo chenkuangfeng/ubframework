@@ -1,4 +1,4 @@
-package com.ubsoft.framework.core.conf;
+package com.ubsoft.framework.core.cache.conf;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;

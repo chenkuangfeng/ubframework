@@ -11,8 +11,8 @@ public class RedisCache implements ICache {
     private RedisTemplate redisTemplate;
 
     public RedisCache(RedisTemplate redisTemplate){
-
         this.redisTemplate=redisTemplate;
+        System.out.println("121212");
     }
 
     @Override
