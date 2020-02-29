@@ -1,22 +1,17 @@
 package com.ubsoft.framework.job.api.impl;
 
-import com.dangdang.ddframe.job.config.JobCoreConfiguration;
-import com.dangdang.ddframe.job.config.JobTypeConfiguration;
-import com.dangdang.ddframe.job.config.simple.SimpleJobConfiguration;
-import com.dangdang.ddframe.job.lite.api.JobScheduler;
-import com.dangdang.ddframe.job.lite.config.LiteJobConfiguration;
 import com.dangdang.ddframe.job.lite.lifecycle.api.*;
-import com.dangdang.ddframe.job.lite.spring.api.SpringJobScheduler;
+import com.dangdang.ddframe.job.lite.lifecycle.domain.JobBriefInfo;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperRegistryCenter;
 import com.google.common.base.Optional;
 import com.ubsoft.framework.core.conf.AppConfig;
 import com.ubsoft.framework.core.context.AppContext;
-import com.ubsoft.framework.job.GeneralJob;
 import com.ubsoft.framework.job.api.IJobAPI;
 import com.ubsoft.framework.job.entity.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.List;
 
 public class ElasticJobAPI implements IJobAPI {
@@ -25,19 +20,15 @@ public class ElasticJobAPI implements IJobAPI {
     private JobSettingsAPI jobSettingsAPI;
     private JobOperateAPI jobOperateAPI;
     private ShardingOperateAPI shardingOperateAPI;
-
     private JobStatisticsAPI jobStatisticsAPI;
-
     private ServerStatisticsAPI serverStatisticsAPI;
     private ShardingStatisticsAPI shardingStatisticsAPI;
-
-
     ZookeeperRegistryCenter regCenter;
 
     public ElasticJobAPI(ZookeeperRegistryCenter regCenter) {
         String serverList=appConfig.getProperty("elasticjob.serverlists");
         String namespace =appConfig.getProperty("elasticjob.namespace");
-        jobSettingsAPI = JobAPIFactory.createJobSettingsAPI(serverList, namespace,Optional.fromNullable(null));
+        jobSettingsAPI = JobAPIFactory.createJobSettingsAPI(serverList, namespace, Optional.fromNullable(null));
         jobOperateAPI = JobAPIFactory.createJobOperateAPI(serverList, namespace,Optional.fromNullable(null));
         shardingOperateAPI = JobAPIFactory.createShardingOperateAPI(serverList, namespace,Optional.fromNullable(null));
         jobStatisticsAPI = JobAPIFactory.createJobStatisticsAPI(serverList, namespace,Optional.fromNullable(null));
@@ -47,42 +38,62 @@ public class ElasticJobAPI implements IJobAPI {
     }
     @Override
     public void addJob(Job job) {
-        JobCoreConfiguration jobCoreConfiguration = JobCoreConfiguration.newBuilder(
-                job.getJobKey(), job.getCron(), 1).shardingItemParameters("123323").build();
-        JobTypeConfiguration jobTypeConfiguration = new SimpleJobConfiguration(jobCoreConfiguration, "");
-        LiteJobConfiguration liteJobConfiguration = LiteJobConfiguration.newBuilder(jobTypeConfiguration).overwrite(true).build();
-        JobScheduler js = new SpringJobScheduler(new GeneralJob(), regCenter, liteJobConfiguration /*, jobEventConfiguration*/);
-        js.init();
+        JobBriefInfo jobBriefInfo= jobStatisticsAPI.getJobBriefInfo(job.getJobKey());
+        if(jobBriefInfo!=null){
+            pauseJob(job);
+            deleteJob(job);
+        }
+//        // 核心配置
+//        JobCoreConfiguration coreConfig =JobCoreConfiguration.newBuilder(job.getJobKey(), job.getCron(), 1).shardingItemParameters("0=1").build();
+//        LiteJobConfiguration jobConfig = null;
+//        JobTypeConfiguration typeConfig = new SimpleJobConfiguration(coreConfig, GeneralJob.class.getCanonicalName());;
+//        jobConfig = LiteJobConfiguration.newBuilder(typeConfig).build();
+//        SimpleJob simpleJob=new GeneralJob();
+//        SpringJobScheduler jobScheduler=new SpringJobScheduler(simpleJob, regCenter, jobConfig);
+//        jobScheduler.init();
     }
 
     @Override
     public void deleteJob(Job job) {
-       // jobOperateAPI.remove();
+
+        pauseJob(job);
+        jobOperateAPI.remove(Optional.of(job.getJobKey()), Optional.<String>absent());
+
+
     }
 
     @Override
     public void runJob(Job job) {
-
+        jobOperateAPI.trigger(Optional.of(job.getJobKey()), Optional.<String>absent());
     }
 
     @Override
     public void pauseJob(Job job) {
 
+        jobOperateAPI.disable(Optional.of(job.getJobKey()), Optional.<String>absent());
     }
 
     @Override
     public void resumeJob(Job job) {
+        jobOperateAPI.enable(Optional.of(job.getJobKey()), Optional.<String>absent());
 
     }
 
     @Override
     public void pauseAll() {
+        Collection<JobBriefInfo> listJob=jobStatisticsAPI.getAllJobsBriefInfo();
+        for(JobBriefInfo jinfo:listJob){
+            jobOperateAPI.disable(Optional.of(jinfo.getJobName()), Optional.<String>absent());
+        }
 
     }
 
     @Override
     public void resumeAll() {
-
+        Collection<JobBriefInfo> listJob=jobStatisticsAPI.getAllJobsBriefInfo();
+        for(JobBriefInfo jinfo:listJob){
+            jobOperateAPI.enable(Optional.of(jinfo.getJobName()), Optional.<String>absent());
+        }
     }
 
     @Override

@@ -17,7 +17,8 @@ public class QuartzJobAPI  implements IJobAPI {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     private Scheduler getScheduler(){
-        Scheduler  scheduler=(Scheduler) AppContext.getBean("quartzScheduler");
+        Scheduler  scheduler=AppContext.getBean(Scheduler.class);
+
         return scheduler;
     }
     //rescheduleJob
@@ -36,7 +37,8 @@ public class QuartzJobAPI  implements IJobAPI {
             }
             if (getScheduler().checkExists(TriggerKey.triggerKey(jobName, jobGroup))) {
 
-                throw new RuntimeException("Job：" + jobName + " 已存在。");
+                deleteJob(job);
+                //throw new RuntimeException("Job：" + jobName + " 已存在。");
             }
             if (StringUtil.isEmpty(jobGroup)) {
                 jobGroup = Scheduler.DEFAULT_GROUP;
@@ -50,7 +52,7 @@ public class QuartzJobAPI  implements IJobAPI {
             jobDetail.getJobDataMap().put("args", job.getArgs());
 
             // 表达式调度构建器
-            CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(cronExpression);
+            CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(cronExpression).withMisfireHandlingInstructionDoNothing();
             CronTrigger trigger = null;
             // 按新的cronExpression表达式构建一个新的trigger
             if (startDate != null && endDate != null) {
@@ -64,6 +66,7 @@ public class QuartzJobAPI  implements IJobAPI {
                 trigger = TriggerBuilder.newTrigger().withIdentity(jobName, jobGroup).withSchedule(scheduleBuilder)
                         .withDescription(description).build();
             }
+
             // 绑定调度器
             getScheduler().scheduleJob(jobDetail, trigger);
         }  catch (Exception e) {
@@ -83,6 +86,8 @@ public class QuartzJobAPI  implements IJobAPI {
                 // 考虑立即运行会产生simple型随机的触发器，以Jobkey作为参数删除
                 getScheduler().pauseTrigger(triggerKey);// 停止触发器
                 getScheduler().unscheduleJob(triggerKey);// 移除触发器
+
+
                 getScheduler().deleteJob(jobKey);
             } else {
                 throw new RuntimeException("该Job不存在");
@@ -112,6 +117,8 @@ public class QuartzJobAPI  implements IJobAPI {
             JobKey key=new JobKey(jobName,jobGroup);
             TriggerKey triggerKey = TriggerKey.triggerKey(jobName, jobGroup);
             if (getScheduler().checkExists(key)) {
+               //getScheduler().pauseTrigger(triggerKey);// 停止触发器
+                //getScheduler().unscheduleJob(triggerKey);// 移除触发器
                 getScheduler().pauseJob(key);
             } else {
                 throw new RuntimeException("job:"+jobName+"不存在");
@@ -128,7 +135,9 @@ public class QuartzJobAPI  implements IJobAPI {
             String jobGroup = job.getJobKey();
             String jobName = job.getJobKey();
             JobKey jobKey = JobKey.jobKey(jobName, jobGroup);
+            TriggerKey triggerKey = TriggerKey.triggerKey(jobName, jobGroup);
             if (getScheduler().checkExists(jobKey)) {
+                //getScheduler().resumeTrigger(triggerKey);
                 getScheduler().resumeJob(jobKey);
             } else {
                 throw new RuntimeException("Job:"+job.getJobKey()+"不存在");
